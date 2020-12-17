@@ -1,6 +1,6 @@
 # NSM Allvis API 
 
->  Script for gathering most relevant data from NSM Allvis API written in python.
+>  Script for gathering most relevant data from [NSM Allvis API](https://nsm.no/tjenester/allvis-nor/) written in python.
 
 
 
