@@ -32,7 +32,7 @@ sudo pip3 install virtualenv
 4. Clone this git-project
 
 ```
-git clone ....
+git clone https://github.com/strompa/nsm-allvis
 ```
 
 5. Create new virtual env. We call it 'allvisenv'
