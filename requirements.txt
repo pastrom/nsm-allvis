@@ -1,2 +1,4 @@
 pathlib>=1.0.1
 requests>=2.25.0
+pymongo>=2.8.1
+pytz>=2020.5

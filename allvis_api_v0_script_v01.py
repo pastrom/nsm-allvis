@@ -2,9 +2,19 @@ import pathlib
 import json
 import pprint
 import requests
+from datetime import datetime
+import pytz
+from pymongo import MongoClient
 
 ###################################
-#### Allvis API config ############
+#### Global settings ##############
+###################################
+
+TIMEZONE = 'Europe/Oslo'
+
+
+###################################
+#### Allvis API settings ##########
 ###################################
 
 # Credentials provided by NSM Allvis
@@ -20,7 +30,6 @@ API_BASEPATH = 'v0'
 # API endpoints 
 API_ENDPOINTS = dict(orgInfo='', nets='groups', services='services', contacts='contacts')
 
-
 ###################################
 ##### Output settings #############
 ###################################
@@ -29,15 +38,25 @@ API_ENDPOINTS = dict(orgInfo='', nets='groups', services='services', contacts='c
 PRINT_TO_CONSOLE = False 
 
 # Save results to JSON-file (True/False)
-SAVE_TO_JSON = True
+SAVE_TO_JSON = False
 JSON_OUTPUT_FILENAME = 'allvis-results.json'
 
+# Save to Azure Cosmos MongoDB-API
+SAVE_TO_AZURE_COSMOS_MONGODB = False
+cosmos_user_name = "username"
+cosmos_password = "pass"
+cosmos_url = "URL:10255/?ssl=true&replicaSet=globaldb&retrywrites=false"
 
 ###################################
 ##### CODE ########################
 ###################################
 
 # Functions
+
+def getTime():
+  tz = pytz.timezone(TIMEZONE)
+  dateTimeObj = datetime.now(tz)
+  return dateTimeObj.isoformat()
 
 def getOrgs(id, key):
   fullUrl = API_URL + '/' + API_BASEPATH + '/org'
@@ -56,36 +75,66 @@ def writeToFile(res, fname):
     print('Storing JSON file to ' + str(pathlib.Path(fname).absolute()))
     json.dump(res, outfile)
 
+def check_server_status(client):
+  db = client.admin
+  server_status = db.command('serverStatus')
+  print('Checking database server status:')
+  print(json.dumps(server_status, sort_keys=False, indent=2, separators=(',', ': ')))
+
+def outputToMongoDb(results, dbClient):
+
+  print('Storing results to Azure Cosmos DB MongoDB API')
+
+  for org, data in results['results'].items():
+
+    myDb = dbClient[org]
+    
+    for ep, content in data.items():
+      myCol = myDb[ep]
+      myCol.insert_one(content)
+
 # main
 
-print('NSM Allvis API script started.')
+print('NSM Allvis API script started. (' + getTime() + ')')
 
-if PRINT_TO_CONSOLE or SAVE_TO_JSON: 
+if PRINT_TO_CONSOLE or SAVE_TO_JSON or SAVE_TO_AZURE_COSMOS_MONGODB: 
 
-  allData = dict()
+  results = dict()
+
+  results['timeStamp'] = getTime()
+  results['results'] = {}
 
   orgs = getOrgs(API_ID, API_KEY)
+
   print('Number of organisations found: ' + str(len(orgs)))
 
   for o in orgs:
-    allData[o['id']] = dict(org=o)
+    results['results'][o['id']] = dict(org=o)
    
     print('Fetching results for organiasation with id \'' + o['id'] + '\'')
 
     for ep in API_ENDPOINTS:
       res = fetchResultsFromApi(o['id'], API_ID, API_KEY, API_ENDPOINTS[ep])
       jsonRes = json.loads(res.text)
-      allData[o['id']][ep] = jsonRes
-    
+      results['results'][o['id']][ep] = jsonRes
+
   if PRINT_TO_CONSOLE:
     print('Outputting to console...')
-    pprint.pprint(allData)
+    pprint.pprint(results)
     
   if SAVE_TO_JSON:
-    writeToFile(allData, JSON_OUTPUT_FILENAME)
+    writeToFile(results, JSON_OUTPUT_FILENAME)
 
+  if SAVE_TO_AZURE_COSMOS_MONGODB:
+        
+    uri = f'mongodb://{cosmos_user_name}:{cosmos_password}@{cosmos_url}'
+    mongo_client = MongoClient(uri)
+
+    check_server_status(mongo_client)
+    
+    outputToMongoDb(results, mongo_client)
+    
   print('Mission complete!')
-  
+
 else:
   print('Error: No outputs are enabled! Check settings in code.')
-  
