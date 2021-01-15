@@ -12,13 +12,14 @@ from pymongo import MongoClient
 
 TIMEZONE = 'Europe/Oslo'
 
+
 ###################################
 #### Allvis API settings ##########
 ###################################
 
 # Credentials provided by NSM Allvis
-API_ID = 'apiid'
-API_KEY = 'apikey'
+API_ID = 'ID'
+API_KEY = 'KEY'
 
 # URL
 API_URL = 'https://api.allvis.no'
@@ -38,14 +39,12 @@ PRINT_TO_CONSOLE = False
 
 # Save results to JSON-file (True/False)
 SAVE_TO_JSON = False
-
 JSON_OUTPUT_FILENAME = 'allvis-results.json'
 
-# Save to Azure Cosmos MongoDB-API (True/False)
-SAVE_TO_AZURE_COSMOS_MONGODB = False
-
+# Save to Azure Cosmos MongoDB-API
+SAVE_TO_AZURE_COSMOS_MONGODB = True
 COSMOS_USER_NAME = "username"
-COSMOS_PASSWORD = "pass"
+COSMOS_PASSWORD = "password"
 COSMOS_URL = "URL:10255/?ssl=true&replicaSet=globaldb&retrywrites=false"
 
 ###################################
@@ -122,15 +121,12 @@ if PRINT_TO_CONSOLE or SAVE_TO_JSON or SAVE_TO_AZURE_COSMOS_MONGODB:
     writeToFile(results, JSON_OUTPUT_FILENAME)
 
   if SAVE_TO_AZURE_COSMOS_MONGODB:
-        
-    uri = f'mongodb://{cosmos_user_name}:{cosmos_password}@{cosmos_url}'
+    uri = f'mongodb://{COSMOS_USER_NAME}:{COSMOS_PASSWORD}@{COSMOS_URL}'
     mongo_client = MongoClient(uri)
-
     check_server_status(mongo_client)
-    
     outputToMongoDb(results, mongo_client)
     
   print('Mission complete!')
-
+  
 else:
   print('Error: No outputs are enabled! Check settings in code.')
