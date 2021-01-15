@@ -30,6 +30,7 @@ API_BASEPATH = 'v0'
 # API endpoints 
 API_ENDPOINTS = dict(orgInfo='', nets='groups', services='services', contacts='contacts')
 
+
 ###################################
 ##### Output settings #############
 ###################################
@@ -43,20 +44,26 @@ JSON_OUTPUT_FILENAME = 'allvis-results.json'
 
 # Save to Azure Cosmos MongoDB-API
 SAVE_TO_AZURE_COSMOS_MONGODB = True
-COSMOS_USER_NAME = "user"
-COSMOS_PASSWORD = "pass"
-COSMOS_URL = "url:10255/?ssl=true&replicaSet=globaldb&retrywrites=false"
+COSMOS_USER_NAME = 'user'
+COSMOS_PASSWORD = 'pass'
+COSMOS_URL = 'url:10255/?ssl=true&replicaSet=globaldb&retrywrites=false'
 
 ###################################
 ##### CODE ########################
 ###################################
 
-# Functions
+### Functions
 
 def getTime():
   tz = pytz.timezone(TIMEZONE)
   dateTimeObj = datetime.now(tz)
   return dateTimeObj.isoformat()
+
+def checkIfOutputIsSet():
+  if PRINT_TO_CONSOLE or SAVE_TO_JSON or SAVE_TO_AZURE_COSMOS_MONGODB:
+    return True
+  else:
+    return False
 
 def getOrgs(id, key):
   fullUrl = API_URL + '/' + API_BASEPATH + '/org'
@@ -65,7 +72,29 @@ def getOrgs(id, key):
   dictRes = json.loads(res.text)
   return dictRes
 
-def fetchResultsFromApi(orgid, apiid, apikey, ep):
+def getResults():
+  results = dict()
+  results['results'] = {}
+
+  # Create timestamp
+  results['timeStamp'] = getTime()
+    
+  # Get organisations
+  orgs = getOrgs(API_ID, API_KEY)
+  print('Number of organisations found: ' + str(len(orgs)))
+
+  for o in orgs:
+    results['results'][o['id']] = dict(org=o)
+    print('Fetching results for organiasation with id \'' + o['id'] + '\'')
+
+    for ep in API_ENDPOINTS:
+      res = fetchEndpointFromApi(o['id'], API_ID, API_KEY, API_ENDPOINTS[ep])
+      jsonRes = json.loads(res.text)
+      results['results'][o['id']][ep] = jsonRes
+  
+  return results
+
+def fetchEndpointFromApi(orgid, apiid, apikey, ep):
   fullUrl = API_URL + '/' + API_BASEPATH + '/org/'+ orgid + '/' + ep
   print('Requesting endpoint: ' + fullUrl)
   return requests.get(fullUrl, auth=(apiid, apikey))
@@ -87,32 +116,9 @@ def outputToMongoDb(results, dbClient):
     myDb = dbClient[org]
     for ep, content in data.items():
       myCol = myDb[ep]
-      myCol.insert_one(content)
+      myCol.insert(content)
 
-# main
-
-print('NSM Allvis API script started. (' + getTime() + ')')
-
-if PRINT_TO_CONSOLE or SAVE_TO_JSON or SAVE_TO_AZURE_COSMOS_MONGODB: 
-  results = dict()
-
-  results['timeStamp'] = getTime()
-  results['results'] = {}
-
-  orgs = getOrgs(API_ID, API_KEY)
-
-  print('Number of organisations found: ' + str(len(orgs)))
-
-  for o in orgs:
-    results['results'][o['id']] = dict(org=o)
-   
-    print('Fetching results for organiasation with id \'' + o['id'] + '\'')
-
-    for ep in API_ENDPOINTS:
-      res = fetchResultsFromApi(o['id'], API_ID, API_KEY, API_ENDPOINTS[ep])
-      jsonRes = json.loads(res.text)
-      results['results'][o['id']][ep] = jsonRes
-
+def outputResults(results):
   if PRINT_TO_CONSOLE:
     print('Outputting to console...')
     pprint.pprint(results)
@@ -125,8 +131,13 @@ if PRINT_TO_CONSOLE or SAVE_TO_JSON or SAVE_TO_AZURE_COSMOS_MONGODB:
     mongo_client = MongoClient(uri)
     check_server_status(mongo_client)
     outputToMongoDb(results, mongo_client)
-    
+
+### Main
+
+print('NSM Allvis API script started. (' + getTime() + ')')
+
+if checkIfOutputIsSet(): 
+  outputResults(getResults())
   print('Mission complete!')
-  
 else:
   print('Error: No outputs are enabled! Check settings in code.')
