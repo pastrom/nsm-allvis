@@ -12,7 +12,6 @@ from pymongo import MongoClient
 
 TIMEZONE = 'Europe/Oslo'
 
-
 ###################################
 #### Allvis API settings ##########
 ###################################
@@ -39,13 +38,15 @@ PRINT_TO_CONSOLE = False
 
 # Save results to JSON-file (True/False)
 SAVE_TO_JSON = False
+
 JSON_OUTPUT_FILENAME = 'allvis-results.json'
 
-# Save to Azure Cosmos MongoDB-API
+# Save to Azure Cosmos MongoDB-API (True/False)
 SAVE_TO_AZURE_COSMOS_MONGODB = False
-cosmos_user_name = "username"
-cosmos_password = "pass"
-cosmos_url = "URL:10255/?ssl=true&replicaSet=globaldb&retrywrites=false"
+
+COSMOS_USER_NAME = "username"
+COSMOS_PASSWORD = "pass"
+COSMOS_URL = "URL:10255/?ssl=true&replicaSet=globaldb&retrywrites=false"
 
 ###################################
 ##### CODE ########################
@@ -82,13 +83,9 @@ def check_server_status(client):
   print(json.dumps(server_status, sort_keys=False, indent=2, separators=(',', ': ')))
 
 def outputToMongoDb(results, dbClient):
-
   print('Storing results to Azure Cosmos DB MongoDB API')
-
   for org, data in results['results'].items():
-
     myDb = dbClient[org]
-    
     for ep, content in data.items():
       myCol = myDb[ep]
       myCol.insert_one(content)
@@ -98,7 +95,6 @@ def outputToMongoDb(results, dbClient):
 print('NSM Allvis API script started. (' + getTime() + ')')
 
 if PRINT_TO_CONSOLE or SAVE_TO_JSON or SAVE_TO_AZURE_COSMOS_MONGODB: 
-
   results = dict()
 
   results['timeStamp'] = getTime()
