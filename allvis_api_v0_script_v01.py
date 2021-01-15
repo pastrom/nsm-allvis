@@ -18,8 +18,8 @@ TIMEZONE = 'Europe/Oslo'
 ###################################
 
 # Credentials provided by NSM Allvis
-API_ID = 'ID'
-API_KEY = 'KEY'
+API_ID = 'id'
+API_KEY = 'key'
 
 # URL
 API_URL = 'https://api.allvis.no'
@@ -43,9 +43,9 @@ JSON_OUTPUT_FILENAME = 'allvis-results.json'
 
 # Save to Azure Cosmos MongoDB-API
 SAVE_TO_AZURE_COSMOS_MONGODB = True
-COSMOS_USER_NAME = "username"
-COSMOS_PASSWORD = "password"
-COSMOS_URL = "URL:10255/?ssl=true&replicaSet=globaldb&retrywrites=false"
+COSMOS_USER_NAME = "user"
+COSMOS_PASSWORD = "pass"
+COSMOS_URL = "url:10255/?ssl=true&replicaSet=globaldb&retrywrites=false"
 
 ###################################
 ##### CODE ########################
