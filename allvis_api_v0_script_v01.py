@@ -1,5 +1,6 @@
 import pathlib
 import json
+import copy
 import pprint
 import requests
 from datetime import datetime
@@ -30,7 +31,6 @@ API_BASEPATH = 'v0'
 # API endpoints 
 API_ENDPOINTS = dict(orgInfo='', nets='groups', services='services', contacts='contacts')
 
-
 ###################################
 ##### Output settings #############
 ###################################
@@ -43,7 +43,7 @@ SAVE_TO_JSON = False
 JSON_OUTPUT_FILENAME = 'allvis-results.json'
 
 # Save to Azure Cosmos MongoDB-API
-SAVE_TO_AZURE_COSMOS_MONGODB = True
+SAVE_TO_AZURE_COSMOS_MONGODB = False
 COSMOS_USER_NAME = 'user'
 COSMOS_PASSWORD = 'pass'
 COSMOS_URL = 'url:10255/?ssl=true&replicaSet=globaldb&retrywrites=false'
@@ -77,7 +77,7 @@ def getResults():
   results['results'] = {}
 
   # Create timestamp
-  results['timeStamp'] = getTime()
+  results['timestamp'] = getTime()
     
   # Get organisations
   orgs = getOrgs(API_ID, API_KEY)
@@ -104,19 +104,22 @@ def writeToFile(res, fname):
     print('Storing JSON file to ' + str(pathlib.Path(fname).absolute()))
     json.dump(res, outfile)
 
-def check_server_status(client):
+def checkServerStatus(client):
   db = client.admin
   server_status = db.command('serverStatus')
+  print('Outputting to Azure Cosmos DB (MongoDB API)')
   print('Checking database server status:')
   print(json.dumps(server_status, sort_keys=False, indent=2, separators=(',', ': ')))
 
 def outputToMongoDb(results, dbClient):
-  print('Storing results to Azure Cosmos DB MongoDB API')
+  print('Storing to database...')
   for org, data in results['results'].items():
     myDb = dbClient[org]
     for ep, content in data.items():
+      contentCopy = copy.deepcopy(content)
+      contentCopy['timestamp'] = results['timestamp']
       myCol = myDb[ep]
-      myCol.insert(content)
+      myCol.insert(contentCopy)
 
 def outputResults(results):
   if PRINT_TO_CONSOLE:
@@ -129,12 +132,12 @@ def outputResults(results):
   if SAVE_TO_AZURE_COSMOS_MONGODB:
     uri = f'mongodb://{COSMOS_USER_NAME}:{COSMOS_PASSWORD}@{COSMOS_URL}'
     mongo_client = MongoClient(uri)
-    check_server_status(mongo_client)
+    checkServerStatus(mongo_client)
     outputToMongoDb(results, mongo_client)
 
 ### Main
 
-print('NSM Allvis API script started. (' + getTime() + ')')
+print('NSM Allvis API script started (' + getTime() + ')')
 
 if checkIfOutputIsSet(): 
   outputResults(getResults())
