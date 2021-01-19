@@ -1,13 +1,14 @@
-# NSM Allvis API 
+# NSM Allvis API
 
->  Script for gathering most relevant data from [NSM Allvis API](https://nsm.no/tjenester/allvis-nor/) written in python.
-
-
+> Script for gathering most relevant data from [NSM Allvis API](https://nsm.no/tjenester/allvis-nor/) written in python.
 
 ## Input and Output
 
-Output: 
-Currently the only outputs are write to file (json) and console/stdout.
+Output:
+
+- Console/stdout
+- JSON-file
+- Azure Cosmos DB (MongoDB API)
 
 ## Build and Run
 
@@ -26,7 +27,7 @@ sudo apt-get install python3-pip git
 3. Install [virtualenv](https://virtualenv.pypa.io/en/latest/)
 
 ```
-sudo pip3 install virtualenv 
+sudo pip3 install virtualenv
 ```
 
 4. Clone this git-project
@@ -53,7 +54,7 @@ source allvisenv/bin/activate
 pip install -r nsm-allvis/requirements.txt
 ```
 
-8. Use editor of choice and enter organisation [API-ID and API-key](https://github.com/strompa/nsm-allvis/blob/4a882ddc5f2201037ca23d8a33ced1b3a0312ea3/allvis_api_v0_script_v01.py#L11) for Allvis service in the script.  
+8. Use editor of choice and enter organisation [API-ID and API-key](https://github.com/strompa/nsm-allvis/blob/4a882ddc5f2201037ca23d8a33ced1b3a0312ea3/allvis_api_v0_script_v01.py#L11) for Allvis service in the script.
 
 ```
 API_ID = 'apiid'
@@ -62,8 +63,8 @@ API_KEY = 'apikey'
 
 9. Configure [outputs](https://github.com/strompa/nsm-allvis/blob/main/allvis_api_v0_script_v01.py#L24)
 
+10) Run script
 
-10. Run script
 ```
 python3  nsm-allvis/allvis_api_v0_script_v01.py
 ```
