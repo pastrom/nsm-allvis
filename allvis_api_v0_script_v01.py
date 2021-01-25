@@ -65,17 +65,21 @@ def checkIfOutputIsSet():
   else:
     return False
 
-def getOrgs(id, key):
+def getOrgs(apiid, apikey):
   fullUrl = API_URL + '/' + API_BASEPATH + '/org'
   print('Requesting organisations at endpoint ' + fullUrl)
-  res = requests.get(fullUrl, auth=(id, key))
+  
+  try:
+    res = requests.get(fullUrl, auth=(apiid, apikey))
+  except requests.exceptions.RequestException as e:  # This is the correct syntax
+    raise SystemExit(e)
+  
   dictRes = json.loads(res.text)
   return dictRes
 
 def getResults():
   results = dict()
-  results['results'] = {}
-
+  
   # Create timestamp
   results['timestamp'] = getTime()
     
@@ -83,6 +87,17 @@ def getResults():
   orgs = getOrgs(API_ID, API_KEY)
   print('Number of organisations found: ' + str(len(orgs)))
 
+  if "error" in orgs:
+    if orgs['error'] == "Unauthorized":
+      errorMsg = {"component": "Allvis API", "issue": "Authentication failure. Is API ID and key configured and valid?", "errorMessage": orgs['error'],}
+      results['error'] = errorMsg
+      return results
+    else:
+      results['error'] = orgs
+      return results
+
+  results['results'] = {}
+  
   for o in orgs:
     results['results'][o['id']] = dict(org=o)
     print('Fetching results for organiasation with id \'' + o['id'] + '\'')
@@ -97,7 +112,13 @@ def getResults():
 def fetchEndpointFromApi(orgid, apiid, apikey, ep):
   fullUrl = API_URL + '/' + API_BASEPATH + '/org/'+ orgid + '/' + ep
   print('Requesting endpoint: ' + fullUrl)
-  return requests.get(fullUrl, auth=(apiid, apikey))
+  
+  try:
+    res = requests.get(fullUrl, auth=(apiid, apikey))
+  except requests.exceptions.RequestException as e:  # This is the correct syntax
+    raise SystemExit(e)
+
+  return res
   
 def writeToFile(res, fname):
   with open(fname, 'w') as outfile:
@@ -106,7 +127,11 @@ def writeToFile(res, fname):
 
 def checkServerStatus(client):
   db = client.admin
-  server_status = db.command('serverStatus')
+  
+  try:
+    server_status = db.command('serverStatus')
+  except Exception as e:
+    raise SystemExit(e)
   print('Outputting to Azure Cosmos DB (MongoDB API)')
   print('Checking database server status:')
   print(json.dumps(server_status, sort_keys=False, indent=2, separators=(',', ': ')))
@@ -119,21 +144,29 @@ def outputToMongoDb(results, dbClient):
       contentCopy = copy.deepcopy(content)
       contentCopy['timestamp'] = results['timestamp']
       myCol = myDb[ep]
-      myCol.insert(contentCopy)
+      try: 
+        myCol.insert(contentCopy)
+      except Exception as e:
+        raise SystemExit(e)
 
 def outputResults(results):
-  if PRINT_TO_CONSOLE:
-    print('Outputting to console...')
-    pprint.pprint(results)
+  if PRINT_TO_CONSOLE or 'error' in results:
+    if 'error' in results:
+      print('ERROR!')
+    else:
+      print('Outputting to console...')
     
-  if SAVE_TO_JSON:
-    writeToFile(results, JSON_OUTPUT_FILENAME)
+    pprint.pprint(results)
 
-  if SAVE_TO_AZURE_COSMOS_MONGODB:
-    uri = f'mongodb://{COSMOS_USER_NAME}:{COSMOS_PASSWORD}@{COSMOS_URL}'
-    mongo_client = MongoClient(uri)
-    checkServerStatus(mongo_client)
-    outputToMongoDb(results, mongo_client)
+  if 'error' not in results:
+    if SAVE_TO_JSON:
+      writeToFile(results, JSON_OUTPUT_FILENAME)
+
+    if SAVE_TO_AZURE_COSMOS_MONGODB:
+      uri = f'mongodb://{COSMOS_USER_NAME}:{COSMOS_PASSWORD}@{COSMOS_URL}'
+      mongo_client = MongoClient(uri)
+      checkServerStatus(mongo_client)
+      outputToMongoDb(results, mongo_client)
 
 ### Main
 
