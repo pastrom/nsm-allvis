@@ -75,6 +75,7 @@ def getOrgs(apiid, apikey):
     raise SystemExit(e)
   
   dictRes = json.loads(res.text)
+
   return dictRes
 
 def getResults():
@@ -142,7 +143,13 @@ def outputToMongoDb(results, dbClient):
     myDb = dbClient[org]
     for ep, content in data.items():
       contentCopy = copy.deepcopy(content)
-      contentCopy['timestamp'] = results['timestamp']
+
+      if isinstance(contentCopy, list):
+        for e in contentCopy:
+          e['timestamp'] = results['timestamp']
+      elif isinstance(contentCopy, dict): 
+        contentCopy['timestamp'] = results['timestamp']
+              
       myCol = myDb[ep]
       try: 
         myCol.insert(contentCopy)
